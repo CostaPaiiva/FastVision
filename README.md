@@ -1,4 +1,4 @@
-# FastVision 👁️⚡ (YOLO + Face Recognition) — Streamlit App
+# FastVision (YOLO + Face Recognition) — Streamlit App
 
 FastVision é um sistema em **Streamlit** para:
 - **Detecção de objetos** com **YOLO (Ultralytics)**
