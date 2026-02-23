@@ -168,7 +168,7 @@ tabA, tabB = st.tabs(["Cadastro (Banco de imagens + nomes)", "Live (Webcam / RTS
 # Conteúdo da aba "Cadastro"
 with tabA:
     # Exibe um subtítulo para a aba de cadastro
-    st.subheader("Cadastro de pessoas (imagens + nome) — SQLite + pasta gallery/")
+    st.subheader("Cadastro de pessoas (imagens + nome) — SQLite + Pasta Gallery/")
     # Divide a área da aba em duas colunas, com espaçamento "large"
     col1, col2 = st.columns(2, gap="large")
 

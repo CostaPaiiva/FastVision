@@ -1,203 +1,315 @@
-# CV App Local (YOLO + Reconhecimento por Nome) — Streamlit (Windows/CPU)
+# FastVision 👁️⚡ (YOLO + Face Recognition) — Streamlit App
 
-Aplicação **100% local** (sem API externa) em **Python + Streamlit** que combina **detecção de objetos com YOLO (Ultralytics)** e **reconhecimento facial por identidade** via **OpenCV (LBPH)** com **SQLite** para cadastro de pessoas (nome + múltiplas imagens), suportando **Webcam (Windows)** e **RTSP (câmera IP)**, além de **export por frame em CSV/JSON**.
+FastVision é um sistema em **Streamlit** para:
+- **Detecção de objetos** com **YOLO (Ultralytics)**
+- **Reconhecimento facial** com **OpenCV (LBPH + Haar Cascade)**
+- **Cadastro de pessoas** e associação de imagens em banco local
+- **Listagem** e **exportação** de dados (CSV/JSON)
 
----
-
-## Features
-
-- **Detecção de objetos (YOLO)** com ajuste de `conf`, `iou`, `imgsz`, `max_det`
-- **Reconhecimento por nome (faces)**:
-  - Cadastro de pessoas (nome + várias imagens)
-  - Treino local do reconhecedor **LBPH**
-  - Identificação em tempo real na live (Webcam/RTSP)
-- **Fontes de vídeo**:
-  - Webcam (Windows, via OpenCV)
-  - RTSP (câmera IP / NVR/DVR)
-- **Export por frame**:
-  - `CSV` ou `JSON` com registros de detecções por frame (objetos e faces)
-- **Totalmente offline**:
-  - SQLite local (`data/app.db`) + arquivos em `gallery/` e `runs/`
+> Ideal para projetos de visão computacional locais, protótipos rápidos e pipelines de identificação/detecção com interface web.
 
 ---
 
-## Stack
+## ✨ Funcionalidades
 
-- **Streamlit** (UI web local)
-- **Ultralytics YOLO** (inferência)
-- **OpenCV + LBPHFaceRecognizer** (reconhecimento facial)
-- **SQLite** (cadastro de pessoas + paths de imagens)
-- **Pandas** (export CSV)
-
----
-
-## Requisitos
-
-- **Windows 10/11**
-- **Python 3.10+** (recomendado)
-- CPU (sem GPU)
+- ✅ Upload de imagem (e/ou seleção de imagens cadastradas)
+- ✅ Detecção de objetos via YOLO (Ultralytics)
+- ✅ Detecção/recorte de faces e pré-processamento
+- ✅ Treinamento de reconhecimento facial (LBPH)
+- ✅ Predição/identificação facial (quando treinado)
+- ✅ Cadastro e atualização de pessoas
+- ✅ Armazenamento de imagens no banco (e metadados)
+- ✅ Exportação de registros para CSV e JSON
+- ✅ Interface simples para operar tudo no navegador
 
 ---
 
-## Instalação (Windows)
+## 🧱 Stack / Tecnologias
 
-No PowerShell, dentro da pasta do projeto:
+- **Python 3.10+** (recomendado 3.11)
+- **Streamlit** (UI)
+- **Ultralytics** (YOLO)
+- **OpenCV Contrib** (LBPH / `cv2.face`)
+- **NumPy / Pandas**
+- **Pillow**
+- **tqdm**
 
-```bat
+---
+
+## 📦 Requisitos
+
+Arquivo `requirements.txt` (sugestão final):
+
+> **Atenção:** evite instalar `opencv-python` e `opencv-contrib-python` juntos.
+> Se você usa LBPH (`cv2.face`), use **apenas** `opencv-contrib-python`.
+
+```txt
+streamlit>=1.30.0
+ultralytics>=8.0.0
+opencv-contrib-python>=4.8.0
+numpy>=1.24.0
+pandas>=2.0.0
+Pillow>=10.0.0
+tqdm>=4.66.0
+
+🚀 Instalação (recomendado com ambiente virtual)
+
+1) Clonar e entrar na pasta
+
+git clone https://github.com/SEU-USUARIO/FastVision.git
+cd FastVision
+
+2) Criar e ativar venv
+
+Windows (PowerShell):
+
 python -m venv .venv
-.venv\Scripts\activate
+.\.venv\Scripts\activate
 
-pip install -U pip
-pip install -r requirements.txt
-Haar Cascade (Obrigatório para o reconhecimento facial)
-Você precisa do arquivo:
+Linux/macOS:
 
-assets/haarcascade_frontalface_default.xml
+python -m venv .venv
+source .venv/bin/activate
 
-Como obter
-Geralmente ele já vem instalado com o OpenCV. Procure algo como:
+3) Instalar dependências
 
-...\.venv\Lib\site-packages\cv2\data\haarcascade_frontalface_default.xml
+python -m pip install -U pip
+python -m pip install -r requirements.txt
 
-Copie para:
+Se você já instalou OpenCV duplicado, limpe e reinstale:
 
-cv_app_local/assets/haarcascade_frontalface_default.xml
+python -m pip uninstall -y opencv-python opencv-contrib-python
+python -m pip install opencv-contrib-python
 
-Se o arquivo não estiver, baixe do repositório oficial do OpenCV e coloque em assets/.
+▶️ Como rodar (IMPORTANTE)
 
-Como Rodar
-.venv\Scripts\activate
-streamlit run app.py
+Use sempre este comando (ele garante que o Streamlit rode no MESMO Python do seu ambiente):
+
+python -m streamlit run app.py
+
 Acesse:
 
 http://localhost:8501
 
-Uso
-1) Cadastro de Pessoas (Banco de imagens + nome)
-Vá na aba Cadastro
+✅ Isso resolve o erro clássico:
 
-Digite o nome da pessoa
+ModuleNotFoundError: No module named 'ultralytics'
+quando você instala pacotes num Python/venv, mas roda o streamlit de outro.
 
-Faça upload de várias imagens com o rosto visível (boa iluminação, face frontal)
+🗂️ Estrutura do projeto (esperada)
+FastVision/
 
-Clique em Salvar no banco
+├─ app.py                 # UI Streamlit
 
-Clique em Treinar/Atualizar modelo de reconhecimento
+├─ db.py                  # Banco local (init, upsert, listagens, imagens)
 
-Dicas para melhorar o reconhecimento (LBPH):
+├─ yolo_backend.py        # YOLODetector + PredictConfig
 
-Use 10+ fotos por pessoa
+├─ face_recog.py          # Haar cascade, preprocess, treino LBPH, predição
 
-Varie levemente ângulo e iluminação
+├─ exporters.py           # Exportação CSV/JSON
 
-Rostos grandes e nítidos funcionam melhor
+├─ requirements.txt
 
-2) Live (Webcam / RTSP)
-Vá na aba Live
+├─ data/                  # (opcional) imagens/modelos/cache
 
-Selecione:
+└─ README.md
 
-Webcam (índice 0, 1, 2…) ou
+🧠 Como funciona (visão geral do fluxo)
+1) Inicialização
 
-RTSP (cole a URL)
+Ao abrir o app, o sistema chama init_db() para preparar o banco local e tabelas necessárias.
 
-Ajuste:
+2) Cadastro de pessoas
 
-YOLO: conf, iou, imgsz
+O usuário cadastra uma pessoa (nome / identificador), permitindo:
 
-Faces: threshold (menor = mais exigente)
+organizar dataset
 
-Clique em Iniciar
+treinar reconhecimento facial
 
-Ao final, o app salva:
+associar imagens posteriormente
 
-runs/<run_name>/detections.csv ou .json
+3) Processamento de imagem
 
-(Opcional) vídeo anotado runs/<run_name>/annotated.mp4
+Ao enviar uma imagem:
 
-RTSP (Exemplos)
-O path muda conforme a marca (exemplos comuns):
+YOLO detecta objetos (classes, bounding boxes, confiança)
 
-rtsp://usuario:senha@IP:554/stream1
+Face pipeline detecta/recorta faces e prepara para treino/predição
 
-rtsp://usuario:senha@IP:554/h264
+4) Treinamento LBPH
 
-rtsp://usuario:senha@IP:554/cam/realmonitor?channel=1&subtype=0
+Com imagens associadas a pessoas, o sistema:
 
-Se não conectar: teste subtype=1 (substream) para reduzir carga na CPU.
+extrai faces
 
-Export (CSV/JSON por frame)
-Os exports são salvos em:
+treina um modelo LBPH para reconhecimento
 
-runs/<execucao>/detections.csv ou detections.json
+5) Predição
 
-Formato (lógica)
-Cada detecção vira uma linha/registro com:
+Com modelo treinado:
 
-run, frame_idx, timestamp, type
+reconhece a face mais provável
 
-Para YOLO: class_id, class_name, confidence, x1,y1,x2,y2
+retorna id/nome e score (dependendo da implementação)
 
-Para faces: name, distance, x1,y1,x2,y2
+6) Persistência
 
-Performance (CPU)
-Para rodar melhor no CPU:
+O sistema pode salvar:
 
-Use yolo11n.pt
+pessoa
 
-imgsz = 416 ou 480
+imagem
 
-Aumente export_every_n (ex.: salvar a cada 2–5 frames)
+metadados (ex: resultados YOLO, bounding boxes etc.)
 
-Troubleshooting
-Webcam não abre
-Tente trocar o índice (0/1/2)
+7) Exportação
 
-Feche apps que possam estar usando a câmera (Teams/Zoom)
+Exporta registros para:
 
-Verifique permissões de câmera no Windows
+CSV (rápido para Excel/Sheets)
 
-RTSP não abre
-Confirme IP/porta/usuário/senha
+JSON (integração e automações)
 
-Teste o stream com VLC antes
+⚙️ Configurações (YOLO / PredictConfig)
 
-Tente substream (menor resolução)
+O yolo_backend.py expõe:
 
-Reconhecimento sempre “desconhecido”
-Cadastre mais fotos por pessoa
+YOLODetector → inicializa modelo e executa predição
 
-Melhore iluminação
+PredictConfig → configura parâmetros da predição
 
-Ajuste threshold (ex.: 70 → 85 para ficar menos exigente)
+Parâmetros típicos (podem variar conforme seu código):
 
-Erro com cv2.face
-Garanta que instalou opencv-contrib-python
+conf (threshold de confiança)
 
-Reinstale:
+iou (NMS IoU)
 
-pip uninstall opencv-python opencv-contrib-python -y
-pip install opencv-contrib-python
-Segurança e Privacidade
-Tudo roda localmente.
+classes (filtrar classes)
 
-O “banco” é um SQLite local (data/app.db) e imagens ficam em gallery/.
+max_det (máximo de detecções)
 
-Use apenas imagens e fontes de vídeo com autorização.
+imgsz (tamanho da imagem)
 
-Roadmap (ideias)
-Tracking (ByteTrack) e contagem por linha/área
+Se você colar o conteúdo do PredictConfig, eu documento os campos exatos aqui com exemplos.
 
-Export em Parquet e dashboards
+🗃️ Banco de dados
 
-Treino com embeddings (FaceNet/ArcFace) para maior robustez
+O módulo db.py gerencia:
 
-Modo “dataset builder” automático via webcam
+init_db → cria/valida tabelas
 
-Créditos
-Ultralytics YOLO (inferência)
+upsert_person → cria/atualiza pessoas
 
-OpenCV (detecção/visão e reconhecimento LBPH)
+add_image → adiciona imagem vinculada
 
-Streamlit (UI)
+list_people, list_images → consultas para UI
 
+Onde fica o banco?
+
+Depende do seu db.py. Normalmente fica:
+
+no mesmo diretório do projeto, ex: fastvision.db
+
+ou em data/fastvision.db
+
+Se você colar o db.py, eu escrevo aqui o caminho real e o schema das tabelas.
+
+📤 Exportação
+
+O módulo exporters.py geralmente oferece:
+
+export_csv(...)
+
+export_json(...)
+
+Sugestão: exportar por filtros
+
+por pessoa
+
+por data
+
+por tipo (faces / objetos)
+
+🧯 Troubleshooting (erros comuns)
+1) No module named 'ultralytics'
+
+Você instalou num ambiente e rodou o Streamlit em outro.
+
+✅ Solução:
+
+python -m pip install ultralytics
+python -m streamlit run app.py
+2) cv2.face não existe
+
+Você está sem OpenCV Contrib.
+
+✅ Solução:
+
+python -m pip uninstall -y opencv-python
+python -m pip install opencv-contrib-python
+3) Conflito OpenCV (opencv-python + opencv-contrib-python)
+
+✅ Mantenha só opencv-contrib-python.
+
+4) Erros relacionados a torch/YOLO (CPU/GPU)
+
+O Ultralytics depende de torch. Em alguns ambientes (principalmente Windows) pode precisar ajuste.
+Se aparecer traceback com torch, cole o erro completo aqui que eu te passo o comando correto (CPU ou CUDA).
+
+🧪 Dicas de uso/qualidade
+
+Use imagens bem iluminadas para reconhecimento facial
+
+Para LBPH:
+
+mais amostras por pessoa = melhor
+
+normalize tamanho/cinza no preprocess_face
+
+Para YOLO:
+
+ajuste conf e iou para reduzir falsos positivos
+
+use classes se quiser filtrar apenas algumas classes
+
+✅ Recomendações de “produção”
+
+Criar .streamlit/config.toml para UI:
+
+[server]
+headless = true
+port = 8501
+enableCORS = false
+
+[browser]
+gatherUsageStats = false
+
+Adicionar .gitignore:
+
+.venv/
+
+__pycache__/
+
+*.pyc
+
+*.db
+
+data/
+
+outputs/
+
+.streamlit/secrets.toml
+
+🗺️ Roadmap (ideias)
+
+ Suporte a webcam/stream (tempo real)
+
+ Batch upload e processamento em lote
+
+ Dashboard com estatísticas (classes detectadas, pessoas reconhecidas)
+
+ Exportação com filtros e relatórios
+
+ Cache de modelo YOLO e resultados (melhora performance)
