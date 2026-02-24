@@ -9,6 +9,91 @@ FastVision é um sistema em **Streamlit** para:
 > Ideal para projetos de visão computacional locais, protótipos rápidos e pipelines de identificação/detecção com interface web.
 
 ---
+## Explicando .. 
+
+1) Barra lateral esquerda — “YOLO (Objetos)”:
+
+Você controla os parâmetros do detector:
+
+Modelo: aparece yolo11n.pt (um peso pequeno/rápido).
+
+Confiança (0.25): abaixo disso, o YOLO ignora detecções.
+
+IoU (0.45): controla o “NMS” (remove caixas duplicadas).
+
+imgsz (CPU) 480: tamanho de entrada do YOLO (mais alto = melhor, porém mais lento).
+
+max_det 200: máximo de objetos detectados por frame/imagem.
+
+2) Treinamento de reconhecimento facial (LBPH):
+
+Quando você clica em Treinar categorizador:
+
+pega todas as imagens cadastradas (list_people() + list_images())
+
+detecta a face (Haar Cascade)
+
+pré-processa (cinza, resize, normalização)
+
+treina o modelo LBPH com labels (id da pessoa → nome)
+
+Resultado: o sistema passa a conseguir reconhecer por nome (não só “tem face”).
+
+3) Predição (Reconhecer / Identificar):
+
+Em um modo “analisar imagem” ou “ao vivo”:
+
+detecta faces na imagem/frame
+
+para cada face, roda lbph.predict(face) e tenta mapear:
+
+label (id) → nome
+
+com um score/threshold
+
+4) YOLO em paralelo:
+
+No mesmo frame/imagem, o YOLO detecta objetos:
+
+retorna bbox + classe + confiança
+
+você configura isso pela sidebar (conf, iou, imgsz, max_det)
+
+5) Exportação:
+
+No modo “Ao vivo + Exportar” (pela aba), normalmente você:
+
+processa cada frame
+
+salva saída por frame em:
+
+CSV/JSON (ex: classes detectadas + pessoas reconhecidas + timestamp/frame_id)
+
+4) Como seus arquivos se encaixam:
+
+app.py: interface (abas, inputs, botões, chama funções)
+
+db.py: SQLite + pasta data/ e paths
+
+yolo_backend.py: YOLODetector + PredictConfig
+
+face_recog.py: cascade + preprocess + treino LBPH + predição
+
+exporters.py: exporta CSV/JSON
+
+5) Como usar na prática (passo a passo)
+
+Vá em Cadastro
+
+Digite “Felipe” e envie 10–30 fotos variadas (ângulos/iluminação)
+
+Repita para outras pessoas
+
+Clique em Treinar categorizador
+
+Vá em Ao vivo e teste pela webcam/RTSP
+
+Quando estiver ok, use Exportar pra gerar CSV/JSON
 
 ## ✨ Funcionalidades
 

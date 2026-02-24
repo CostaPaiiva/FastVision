@@ -27,7 +27,7 @@ from face_recog import get_face_cascade, preprocess_face, train_lbph, predict_fa
 from exporters import export_csv, export_json
 
 # Define uma constante para o título da aplicação
-APP_TITLE = "CV App Local (YOLO + Reconhecimento por Nome)"
+APP_TITLE = "Fast Vision (YOLO + Reconhecimento por Nome)"
 # Define o nome do diretório onde as execuções (runs) serão salvas
 RUNS_DIR = "runs"
 # Define o nome do diretório onde as imagens da galeria (cadastro de faces) serão armazenadas
@@ -281,129 +281,203 @@ with tabA:
 
 # Live
 with tabB:
+    # Exibe um subtítulo para a aba "Live"
     st.subheader("Live: Webcam ou RTSP (OpenCV) + export por frame")
+    # Exibe uma dica para otimização de desempenho em CPU
     st.caption("Dica CPU: use yolo11n + imgsz 416/480 para ficar leve.")
 
+    # Cria um seletor de rádio para escolher a fonte de vídeo (Webcam ou RTSP)
     source_type = st.radio("Fonte", ["Webcam", "RTSP"], horizontal=True)
+    # Cria um campo numérico para o índice da webcam, desabilitado se a fonte não for "Webcam"
     cam_index = st.number_input("Indice da webcam", 0, 10, 0, 1, disabled=(source_type != "Webcam"))
+    # Cria um campo de texto para a URL RTSP, desabilitado se a fonte não for "RTSP"
     rtsp_url = st.text_input("RTSP URL (ex: rtsp://user:pass@ip:554/...) ", disabled=(source_type != "RTSP"))
 
+    # Divide a área em duas colunas com proporção 2:1
     colL, colR = st.columns([2, 1], gap="large")
 
     with colR:
+        # Exibe um subtítulo para a seção de controles
         st.markdown("### Controles")
+        # Cria um toggle (chave) para iniciar/parar a execução
         start = st.toggle("Iniciar", value=False)
+        # Cria um checkbox para decidir se o vídeo anotado será gravado
         save_annotated_video = st.checkbox("Gravar video anotado (mp4)", value=False)
+        # Cria um slider para definir o tempo máximo de execução em segundos
         max_seconds = st.slider("Limite (segundos) para rodar", 5, 300, 30, 5)
+        # Cria um campo de texto para o nome da execução, preenchido com um timestamp padrão
         run_name = st.text_input("Nome da execucao", value=time.strftime("%Y%m%d-%H%M%S"))
 
+        # Exibe um subtítulo para a seção de reconhecimento
         st.markdown("### Reconhecimento")
+        # Cria um checkbox para ativar/desativar o reconhecimento facial por nome
         use_face = st.checkbox("Ativar reconhecimento por nome", value=True)
+        # Verifica se o reconhecimento facial está ativado mas o modelo não foi treinado
         if use_face and "recognizer" not in st.session_state:
+            # Exibe um aviso para treinar o modelo primeiro
             st.warning("Treine o modelo na aba Cadastro antes de usar reconhecimento.")
 
     with colL:
+        # Cria um placeholder vazio na interface do Streamlit para exibir o frame do vídeo
         frame_box = st.empty()
+        # Cria outro placeholder vazio para exibir informações sobre o processamento
         info_box = st.empty()
 
+    # Verifica se o botão "Iniciar" foi ativado
     if start:
+        # Verifica se o classificador Haar cascade para detecção de faces foi carregado com sucesso
         if cascade is None:
+            # Se não foi, exibe uma mensagem de erro
             st.error("Sem Haar cascade. Corrija o arquivo assets/haarcascade_frontalface_default.xml.")
         else:
+            # Determina a fonte do vídeo (índice da webcam ou URL RTSP) com base na seleção do usuário
             src = int(cam_index) if source_type == "Webcam" else rtsp_url.strip()
+            # Tenta abrir a fonte de vídeo usando OpenCV (VideoCapture)
             cap = cv2.VideoCapture(src)
+            # Verifica se a fonte de vídeo foi aberta com sucesso
             if not cap.isOpened():
+                # Se não conseguiu abrir, exibe uma mensagem de erro
                 st.error("Nao consegui abrir a fonte. Verifique webcam/RTSP e permissoes.")
             else:
+                # Inicializa uma lista vazia para armazenar os registros de detecção e reconhecimento
                 records: List[Dict[str, Any]] = []
+                # Constrói o caminho para o diretório de saída desta execução específica
                 out_dir = os.path.join(RUNS_DIR, run_name)
+                # Garante que o diretório de saída exista, criando-o se necessário
                 ensure_dir(out_dir)
 
+                # Inicializa o objeto gravador de vídeo como None
                 writer = None
+                # Inicializa o caminho do vídeo de saída como None
                 out_video = None
+                # Verifica se a opção de salvar o vídeo anotado está ativada
                 if save_annotated_video:
+                    # Obtém a largura do frame da fonte de vídeo, com fallback para 640
                     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 640)
+                    # Obtém a altura do frame da fonte de vídeo, com fallback para 480
                     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 480)
+                    # Obtém a taxa de quadros por segundo (FPS) da fonte de vídeo, com fallback para 20.0
                     fps = cap.get(cv2.CAP_PROP_FPS) or 20.0
+                    # Define o caminho completo para o arquivo de vídeo de saída
                     out_video = os.path.join(out_dir, "annotated.mp4")
+                    # Define o codec de vídeo (FourCC) para MP4
                     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                    # Cria um objeto VideoWriter para gravar o vídeo anotado
                     writer = cv2.VideoWriter(out_video, fourcc, float(fps), (w, h))
 
+                # Registra o tempo inicial da execução para controle do limite de segundos
                 t0 = time.time()
+                # Inicializa o contador de frames processados
                 frame_idx = 0
 
+                # Inicia um loop infinito para processar os frames da fonte de vídeo
                 while True:
+                    # Lê um frame da fonte de vídeo (cap é o objeto VideoCapture)
                     ok, frame = cap.read()
+                    # Verifica se a leitura do frame foi bem-sucedida
                     if not ok:
+                        # Se não foi, exibe um aviso e encerra o loop
                         info_box.warning("Falha ao ler frame. Encerrando.")
                         break
 
+                    # Realiza a predição de objetos YOLO no frame e obtém o frame anotado e as detecções
                     annotated, dets = yolo.predict(frame, cfg)
 
+                    # Inicializa uma lista vazia para armazenar os resultados do reconhecimento facial
                     faces_out = []
+                    # Verifica se o reconhecimento facial está ativado e se o reconhecedor está disponível na sessão
                     if use_face and "recognizer" in st.session_state:
+                        # Chama a função predict_faces para detectar e reconhecer faces no frame
                         faces_out = predict_faces(
-                            frame_bgr=frame,
-                            recognizer=st.session_state["recognizer"],
-                            label_to_name=st.session_state.get("label_to_name", {}),
-                            cascade=cascade,
-                            threshold=face_threshold
+                            frame_bgr=frame, # O frame atual em formato BGR
+                            recognizer=st.session_state["recognizer"], # O modelo de reconhecimento treinado
+                            label_to_name=st.session_state.get("label_to_name", {}), # Mapeamento de IDs para nomes
+                            cascade=cascade, # O classificador Haar cascade para detecção de faces
+                            threshold=face_threshold # Limiar de confiança para o reconhecimento
                         )
+                        # Itera sobre cada resultado de reconhecimento facial obtido
                         for fname, dist, (x, y, w, h) in faces_out:
+                            # Desenha um retângulo verde ao redor da face reconhecida no frame anotado
                             cv2.rectangle(annotated, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                            # Adiciona o nome da pessoa e a distância (confiança) acima do retângulo da face
                             cv2.putText(
-                                annotated,
-                                f"{fname} ({dist:.0f})",
-                                (x, max(0, y - 8)),
-                                cv2.FONT_HERSHEY_SIMPLEX,
-                                0.6,
-                                (0, 255, 0),
-                                2
+                                annotated, # Imagem onde desenhar
+                                f"{fname} ({dist:.0f})", # Texto a ser exibido (nome e distância)
+                                (x, max(0, y - 8)), # Posição do texto (ajusta para não sair da imagem)
+                                cv2.FONT_HERSHEY_SIMPLEX, # Fonte do texto
+                                0.6, # Escala da fonte
+                                (0, 255, 0), # Cor do texto (verde)
+                                2 # Espessura da linha do texto
                             )
 
+                    # Verifica se o índice do frame atual é um múltiplo do valor de export_every_n
                     if frame_idx % export_every_n == 0:
+                        # Obtém o timestamp atual
                         ts = time.time()
+                        # Itera sobre cada detecção YOLO
                         for d in dets:
+                            # Adiciona um novo registro à lista 'records' com informações da detecção YOLO
                             records.append({
-                                "run": run_name,
-                                "frame_idx": frame_idx,
-                                "timestamp": ts,
-                                "type": "yolo",
-                                **d
+                                "run": run_name, # Nome da execução
+                                "frame_idx": frame_idx, # Índice do frame
+                                "timestamp": ts, # Timestamp
+                                "type": "yolo", # Tipo de detecção (YOLO)
+                                **d # Desempacota os detalhes da detecção YOLO
                             })
+                        # Itera sobre cada resultado de reconhecimento facial
                         for fname, dist, (x, y, w, h) in faces_out:
+                            # Adiciona um novo registro à lista 'records' com informações do reconhecimento facial
                             records.append({
-                                "run": run_name,
-                                "frame_idx": frame_idx,
-                                "timestamp": ts,
-                                "type": "face",
-                                "name": fname,
-                                "distance": float(dist),
-                                "x1": int(x), "y1": int(y), "x2": int(x + w), "y2": int(y + h)
+                                "run": run_name, # Nome da execução
+                                "frame_idx": frame_idx, # Índice do frame
+                                "timestamp": ts, # Timestamp
+                                "type": "face", # Tipo de detecção (face)
+                                "name": fname, # Nome da pessoa reconhecida
+                                "distance": float(dist), # Distância (confiança) do reconhecimento
+                                "x1": int(x), "y1": int(y), "x2": int(x + w), "y2": int(y + h) # Coordenadas da face
                             })
 
+                    # Se um gravador de vídeo estiver ativo
                     if writer is not None:
+                        # Escreve o frame anotado no arquivo de vídeo
                         writer.write(annotated)
 
+                    # Exibe o frame anotado na interface do Streamlit (convertendo de BGR para RGB)
                     frame_box.image(bgr_to_rgb(annotated), use_container_width=True)
+                    # Exibe informações sobre o frame atual (índice, número de detecções YOLO e faces)
                     info_box.info(f"Frame: {frame_idx} | YOLO: {len(dets)} | Faces: {len(faces_out)}")
 
+                    # Incrementa o índice do frame
                     frame_idx += 1
+                    # Verifica se o tempo de execução excedeu o limite máximo definido
                     if time.time() - t0 >= max_seconds:
+                        # Sai do loop se o tempo limite for atingido
                         break
 
+                # Libera o objeto de captura de vídeo (webcam/RTSP)
                 cap.release()
+                # Se um gravador de vídeo estava ativo
                 if writer is not None:
+                    # Libera o gravador de vídeo
                     writer.release()
 
+                # Verifica o formato de exportação selecionado
                 if export_format == "CSV":
+                    # Define o caminho de saída para o arquivo CSV
                     out_path = os.path.join(out_dir, "detections.csv")
+                    # Exporta os registros para um arquivo CSV
                     export_csv(records, out_path)
                 else:
+                    # Define o caminho de saída para o arquivo JSON
                     out_path = os.path.join(out_dir, "detections.json")
+                    # Exporta os registros para um arquivo JSON
                     export_json(records, out_path)
 
+                # Exibe uma mensagem de sucesso indicando onde a execução foi salva
                 st.success(f"Execucao salva em: {out_dir}")
+                # Exibe o caminho do arquivo de exportação
                 st.write("Arquivo export:", out_path)
+                # Se um vídeo de saída foi gravado e existe
                 if out_video and os.path.exists(out_video):
+                    # Exibe o vídeo de saída no Streamlit
                     st.video(out_video)
