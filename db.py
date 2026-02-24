@@ -4,27 +4,35 @@ from typing import List, Tuple # Importa tipos para anotações de tipo.
 
 DB_PATH = os.path.join("data", "app.db") # Define o caminho completo para o arquivo do banco de dados.
 
-def init_db() -> None: # Define a função para inicializar o banco de dados.
-    os.makedirs("data", exist_ok=True) # Cria o diretório 'data' se ele não existir.
-    conn = sqlite3.connect(DB_PATH) # Conecta-se ao banco de dados SQLite.
-    cur = conn.cursor() # Cria um objeto cursor para executar comandos SQL.
-    cur.execute(""" # Inicia a execução de um comando SQL multilinha.
-        CREATE TABLE IF NOT EXISTS people ( # Cria a tabela 'people' se ela não existir.
-            id INTEGER PRIMARY KEY AUTOINCREMENT, # Define 'id' como chave primária auto incrementada.
-            name TEXT NOT NULL UNIQUE # Define 'name' como texto não nulo e único.
-        )
-    """) # Fecha o comando SQL.
-    cur.execute(""" # Inicia a execução de outro comando SQL multilinha.
-        CREATE TABLE IF NOT EXISTS images ( # Cria a tabela 'images' se ela não existir.
-            id INTEGER PRIMARY KEY AUTOINCREMENT, # Define 'id' como chave primária auto incrementada.
-            person_id INTEGER NOT NULL, # Define 'person_id' como inteiro não nulo.
-            path TEXT NOT NULL, # Define 'path' como texto não nulo.
-            FOREIGN KEY(person_id) REFERENCES people(id) # Define 'person_id' como chave estrangeira referenciando 'people(id)'.
-        )
-    """) # Fecha o comando SQL.
-    conn.commit() # Salva as alterações no banco de dados.
-    conn.close() # Fecha a conexão com o banco de dados.
+def init_db() -> None:
+    # Cria o diretório 'data' se ele não existir.
+    os.makedirs("data", exist_ok=True)
 
+    # Conecta-se ao banco de dados SQLite.
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    # Cria a tabela 'people' se ela não existir.
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS people (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE
+        );
+    """)
+
+    # Cria a tabela 'images' se ela não existir.
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            person_id INTEGER NOT NULL,
+            path TEXT NOT NULL,
+            FOREIGN KEY(person_id) REFERENCES people(id)
+        );
+    """)
+
+    conn.commit()
+    conn.close()
+    
 def upsert_person(name: str) -> int: # Define a função para inserir ou obter uma pessoa pelo nome.
     conn = sqlite3.connect(DB_PATH) # Conecta-se ao banco de dados.
     cur = conn.cursor() # Cria um objeto cursor.
