@@ -69,7 +69,7 @@ salva saída por frame em:
 
 CSV/JSON (ex: classes detectadas + pessoas reconhecidas + timestamp/frame_id)
 
-4) Como seus arquivos se encaixam:
+6) Como seus arquivos se encaixam:
 
 app.py: interface (abas, inputs, botões, chama funções)
 
@@ -81,7 +81,7 @@ face_recog.py: cascade + preprocess + treino LBPH + predição
 
 exporters.py: exporta CSV/JSON
 
-5) Como usar na prática (passo a passo)
+7) Como usar na prática (passo a passo)
 
 Vá em Cadastro
 
